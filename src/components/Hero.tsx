@@ -2,6 +2,7 @@
 'use client'
 
 import Image from 'next/image'
+import BookingModal from './BookingModal'
 
 export default function Hero() {
   return (
@@ -14,9 +15,7 @@ export default function Hero() {
           <p className="text-lg text-primary-700 mb-6">
             Experience premium hair care in our relaxing studio with expert stylists.
           </p>
-          <button className="bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-3 rounded-full font-medium text-lg transition-colors duration-200">
-            Book Your Appointment
-          </button>
+          <BookingModal />
         </div>
         <div className="md:w-1/2 flex justify-center">
           <Image
