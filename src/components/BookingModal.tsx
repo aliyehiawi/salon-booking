@@ -62,7 +62,48 @@ export default function BookingModal() {
             {/* Modal Content */}
             <div className="p-6 text-gray-700">
               <p className="text-center text-lg text-gray-400">
-                Step {step}: UI content will go here.
+                Step {step}: {step === 1 && (
+                  <div>
+                    <h4 className="font-heading text-lg font-semibold mb-4">
+                      Select a Service
+                    </h4>
+                    <div className="space-y-4">
+                      {[
+                        { id: 'haircut', label: 'Haircut & Style', duration: '60 min', price: '$65' },
+                        { id: 'color', label: 'Full Color', duration: '120 min', price: '$120' },
+                        { id: 'treatment', label: 'Hair Treatment', duration: '45 min', price: '$55' },
+                        { id: 'balayage', label: 'Balayage', duration: '180 min', price: '$200' },
+                      ].map((service) => (
+                        <label
+                          key={service.id}
+                          className="flex items-center p-4 border rounded-lg cursor-pointer hover:border-secondary-300 transition-colors duration-200"
+                        >
+                          <input
+                            type="radio"
+                            name="service"
+                            value={service.id}
+                            className="h-5 w-5 text-secondary-500 focus:ring-secondary-300"
+                          />
+                          <div className="ml-3">
+                            <span className="block font-medium">{service.label}</span>
+                            <span className="block text-sm text-gray-500">
+                              {service.duration} • {service.price}
+                            </span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="mt-6 flex justify-end">
+                      <button
+                        onClick={() => setStep(2)}
+                        className="bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </p>
             </div>
           </div>
