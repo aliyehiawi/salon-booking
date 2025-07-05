@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
 import clsx from 'classnames'
+import { submitBooking } from '@/lib/api'
 
 const steps = ['Service', 'Date & Time', 'Your Info', 'Confirm']
 
@@ -242,19 +243,24 @@ export default function BookingModal() {
                       ← Back
                     </button>
                     <button
-                      onClick={() => {
-                        alert('✅ Booking submitted!')
-                        setVisible(false)
-                        setStep(1)
-                        setBooking({
-                          service: '',
-                          date: '',
-                          time: '',
-                          name: '',
-                          email: '',
-                          phone: '',
-                          notes: '',
-                        })
+                      onClick={async () => {
+                        try {
+                          await submitBooking(booking)
+                          alert('✅ Booking confirmed!')
+                          setVisible(false)
+                          setStep(1)
+                          setBooking({
+                            service: '',
+                            date: '',
+                            time: '',
+                            name: '',
+                            email: '',
+                            phone: '',
+                            notes: '',
+                          })
+                        } catch (err: any) {
+                          alert('❌ ' + err.message)
+                        }
                       }}
                       className="bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200"
                     >
