@@ -8,6 +8,11 @@ const bookingSchema = new mongoose.Schema({
   email: String,
   phone: String,
   notes: String,
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'cancelled', 'postponed'],
+    default: 'pending',
+  },
 }, { timestamps: true })
 
 module.exports = mongoose.model('Booking', bookingSchema)
