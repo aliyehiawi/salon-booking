@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.js";  
 
 :root {
   --font-heading: 'Playfair Display', serif;
@@ -12,6 +11,32 @@
     @apply max-w-7xl mx-auto px-4;
   }
 }
+@layer base {
+  button {
+    @apply cursor-pointer;
+  }
+}
+@layer base {
+  input,
+  textarea,
+  select {
+    @apply border border-gray-200 rounded-lg;
+  }
+}
+@layer utilities {
+  /* make every border-top 1px solid gray-200 */
+  .border {
+    @apply border-gray-200;
+  }
+  .border-t {
+    @apply border-t border-gray-200;
+  }
+  /* make every border-bottom 1px solid gray-200 */
+  .border-b {
+    @apply border-b border-gray-200;
+  }
+}
+
 
 
 body {

@@ -1,13 +1,17 @@
-// src/app/api/bookings/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/dbConnect'
-import Booking     from '@/models/Booking'
+import Booking from '@/models/Booking'
 
-// Public: Create a booking
 export async function POST(req: NextRequest) {
   await dbConnect()
   try {
     const data = await req.json()
+    
+    // Ensure we have both serviceId and serviceName
+    if (!data.serviceId || !data.serviceName) {
+      return NextResponse.json({ error: 'Service ID and name are required' }, { status: 400 })
+    }
+    
     const booking = await Booking.create(data)
     return NextResponse.json({ message: 'Booking saved', booking }, { status: 201 })
   } catch (err: any) {
@@ -15,7 +19,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// (Optional) Public: List bookings — useful for testing
 export async function GET() {
   await dbConnect()
   try {

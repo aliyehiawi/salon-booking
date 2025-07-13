@@ -1,58 +1,33 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import ReactDatePicker from 'react-datepicker'
+import { ChevronLeft, ChevronRight, Download, Filter } from 'lucide-react'
+import { format } from 'date-fns'
+import 'react-datepicker/dist/react-datepicker.css'
 import { useToast } from '@/context/ToastContext'
-import { useRouter } from 'next/navigation'
 
 type Booking = {
   _id: string
   name: string
+  serviceName: string
+  date: string    // "YYYY-MM-DD"
+  time: string
   email: string
   phone: string
-  service: string
-  date: string
-  time: string
   status: string
 }
 
 export default function AdminPage() {
-  const [checkingAuth, setCheckingAuth]     = useState(true)
-  const [authenticated, setAuthenticated]   = useState(false)
-  const [bookings, setBookings]             = useState<Booking[]>([])
-  const [loading, setLoading]               = useState(true)
-  const [filterStatus, setFilterStatus]     = useState('all')
-  const [postponeTarget, setPostponeTarget] = useState<Booking | null>(null)
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filterDate, setFilterDate] = useState<Date | null>(null)
+  const [filterStatus, setFilterStatus] = useState<string>('all')
 
-  const router = useRouter()
   const { showToast } = useToast()
 
-  // 1️⃣ Authentication check
+  // Load bookings
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('adminToken')
-      if (!token) {
-        router.replace('/admin/login')
-        setCheckingAuth(false)
-        return
-      }
-      try {
-        const res = await fetch('/api/admin/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok) throw new Error()
-        setAuthenticated(true)
-      } catch {
-        router.replace('/admin/login')
-      } finally {
-        setCheckingAuth(false)
-      }
-    }
-    checkAuth()
-  }, [router])
-
-  // 2️⃣ Load bookings after we know we're authenticated
-  useEffect(() => {
-    if (!authenticated) return
     const fetchBookings = async () => {
       setLoading(true)
       try {
@@ -61,198 +36,212 @@ export default function AdminPage() {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()
-        if (Array.isArray(data)) {
-          setBookings(data)
-        }
+        if (Array.isArray(data)) setBookings(data)
       } catch (err) {
         console.error('Error fetching bookings:', err)
+        showToast('Failed to load bookings', 'error')
       } finally {
         setLoading(false)
       }
     }
     fetchBookings()
-  }, [authenticated])
+  }, [showToast])
 
-  // 3️⃣ Guard – don't render anything until auth check completes
-  if (checkingAuth) {
-    return null
-  }
-  if (!authenticated) {
-    return null
+  // Format a Date as YYYY-MM-DD
+  const toYYYYMMDD = (d: Date) => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
   }
 
-  // 4️⃣ Action to update status or postpone
-  const updateStatus = async (id: string, status: string, newDate?: string) => {
-    const token = localStorage.getItem('adminToken')
-    const res = await fetch(`/api/admin/bookings/${id}/status/${status}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ date: newDate }),
-    })
-    const updated = await res.json()
-    setBookings(prev => prev.map(b => b._id === id ? updated : b))
-    showToast(`✅ Booking ${status}`, 'success')
+  // Filter bookings by date and status
+  const filtered = bookings.filter(b => {
+    const dateMatch = !filterDate || b.date === toYYYYMMDD(filterDate)
+    const statusMatch = filterStatus === 'all' || b.status === filterStatus
+    return dateMatch && statusMatch
+  })
+
+  // Export CSV of filtered bookings
+  const exportCSV = () => {
+    const header = 'Client,Service,Date,Time,Email,Phone,Status\n'
+    const rows = filtered
+      .map(b => `${b.name},${b.serviceName},${b.date},${b.time},${b.email},${b.phone},${b.status}`)
+      .join('\n')
+    const blob = new Blob([header + rows], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `bookings-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    showToast('CSV exported successfully', 'success')
+  }
+
+  const updateBookingStatus = async (bookingId: string, newStatus: string) => {
+    try {
+      const token = localStorage.getItem('adminToken')
+      const res = await fetch(`/api/admin/bookings/${bookingId}`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ status: newStatus })
+      })
+      
+      if (!res.ok) throw new Error('Failed to update status')
+      
+      setBookings(prev => prev.map(b => 
+        b._id === bookingId ? { ...b, status: newStatus } : b
+      ))
+      showToast('Status updated successfully', 'success')
+    } catch (error) {
+      showToast('Failed to update status', 'error')
+    }
   }
 
   return (
-    <main className="min-h-screen bg-primary-50 p-8">
+    <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="font-heading text-2xl font-bold">Admin Dashboard</h1>
-        <button
-          onClick={() => {
-            localStorage.removeItem('adminToken')
-            router.replace('/admin/login')
-          }}
-          className="text-sm text-gray-500 hover:text-black underline"
-        >
-          Logout
-        </button>
-      </div>
-
-      <div className="mb-6 flex flex-wrap items-center gap-4 justify-between">
         <div>
-          <label className="text-sm text-gray-700 mr-2">Filter:</label>
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border rounded-md text-sm"
-          >
-            {['all', 'pending', 'confirmed', 'cancelled', 'postponed'].map(s => (
-              <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-            ))}
-          </select>
+          <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
+          <p className="text-gray-600 mt-1">Manage and view all salon bookings</p>
         </div>
         <button
-          onClick={() => {
-            const header = 'Client,Service,Date,Time,Status\n'
-            const rows = bookings
-              .map(b => `${b.name},${b.service},${b.date},${b.time},${b.status}`)
-              .join('\n')
-            const blob = new Blob([header + rows], { type: 'text/csv' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = 'bookings.csv'
-            a.click()
-            URL.revokeObjectURL(url)
-          }}
-          className="bg-secondary-500 text-white px-4 py-2 rounded text-sm"
+          onClick={exportCSV}
+          className="flex items-center bg-secondary-500 text-white px-4 py-2 rounded-lg hover:bg-secondary-600 transition-colors"
         >
+          <Download className="w-4 h-4 mr-2" />
           Export CSV
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="mb-6 flex flex-wrap gap-4 items-center">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-gray-500" />
+          <span className="text-sm text-gray-700">Filters:</span>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-700">Date:</label>
+          <ReactDatePicker
+            selected={filterDate}
+            onChange={date => setFilterDate(date)}
+            placeholderText="All dates"
+            dateFormat="yyyy-MM-dd"
+            isClearable
+            className="px-3 py-1 border rounded-md text-sm focus:ring-secondary-300 focus:border-secondary-300"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-700">Status:</label>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-3 py-1 border rounded-md text-sm focus:ring-secondary-300 focus:border-secondary-300"
+          >
+            <option value="all">All</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="postponed">Postponed</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <div className="text-2xl font-bold text-blue-600">{bookings.length}</div>
+          <div className="text-sm text-blue-600">Total Bookings</div>
+        </div>
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <div className="text-2xl font-bold text-yellow-600">
+            {bookings.filter(b => b.status === 'pending').length}
+          </div>
+          <div className="text-sm text-yellow-600">Pending</div>
+        </div>
+        <div className="bg-green-50 p-4 rounded-lg">
+          <div className="text-2xl font-bold text-green-600">
+            {bookings.filter(b => b.status === 'confirmed').length}
+          </div>
+          <div className="text-sm text-green-600">Confirmed</div>
+        </div>
+        <div className="bg-red-50 p-4 rounded-lg">
+          <div className="text-2xl font-bold text-red-600">
+            {bookings.filter(b => b.status === 'cancelled').length}
+          </div>
+          <div className="text-sm text-red-600">Cancelled</div>
+        </div>
+      </div>
+
       {loading ? (
-        <p className="text-gray-500">Loading bookings...</p>
-      ) : bookings.length === 0 ? (
-        <p className="text-gray-400">No bookings yet.</p>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary-500 mx-auto"></div>
+          <p className="text-gray-500 mt-2">Loading bookings...</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-400">No bookings found for the selected filters.</p>
+        </div>
       ) : (
-        <div className="overflow-x-auto bg-white shadow rounded-lg">
+        <div className="overflow-x-auto">
           <table className="min-w-full text-sm text-left">
-            <thead className="bg-primary-100 text-primary-800">
+            <thead className="bg-gray-50 text-gray-700">
               <tr>
-                <th className="p-4">Client</th>
-                <th className="p-4">Service</th>
-                <th className="p-4">Date</th>
-                <th className="p-4">Time</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">Actions</th>
+                <th className="p-4 font-medium">Client</th>
+                <th className="p-4 font-medium">Service</th>
+                <th className="p-4 font-medium">Date</th>
+                <th className="p-4 font-medium">Time</th>
+                <th className="p-4 font-medium">Contact</th>
+                <th className="p-4 font-medium">Status</th>
+                <th className="p-4 font-medium">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {bookings
-                .filter(b => filterStatus === 'all' || b.status === filterStatus)
-                .map(b => (
-                  <tr key={b._id} className="border-b">
-                    <td className="p-4">{b.name}</td>
-                    <td className="p-4">{b.service}</td>
-                    <td className="p-4">{b.date}</td>
-                    <td className="p-4">{b.time}</td>
-                    <td className="p-4">
-                      <span
-                        className={
-                          b.status === 'cancelled'
-                            ? 'text-red-500'
-                            : b.status === 'confirmed'
-                            ? 'text-green-600'
-                            : b.status === 'postponed'
-                            ? 'text-yellow-600'
-                            : 'text-gray-600'
-                        }
-                      >
-                        {b.status}
-                      </span>
-                    </td>
-                    <td className="p-4 space-x-2">
-                      {b.status !== 'confirmed' && (
-                        <button
-                          onClick={() => updateStatus(b._id, 'confirmed')}
-                          className="text-green-600 hover:underline text-sm"
-                        >
-                          Confirm
-                        </button>
-                      )}
-                      {b.status !== 'cancelled' && (
-                        <button
-                          onClick={() => updateStatus(b._id, 'cancelled')}
-                          className="text-red-500 hover:underline text-sm"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                      {b.status !== 'postponed' && (
-                        <button
-                          onClick={() => setPostponeTarget(b)}
-                          className="text-yellow-600 hover:underline text-sm"
-                        >
-                          Postpone
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+            <tbody className="divide-y divide-gray-200">
+              {filtered.map(b => (
+                <tr key={b._id} className="hover:bg-gray-50">
+                  <td className="p-4">
+                    <div className="font-medium text-gray-900">{b.name}</div>
+                  </td>
+                  <td className="p-4 text-gray-700">{b.serviceName}</td>
+                  <td className="p-4 text-gray-700">{b.date}</td>
+                  <td className="p-4 text-gray-700">{b.time}</td>
+                  <td className="p-4">
+                    <div className="text-gray-700">{b.email}</div>
+                    <div className="text-sm text-gray-500">{b.phone}</div>
+                  </td>
+                  <td className="p-4">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      b.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                      b.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      b.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {b.status}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <select
+                      value={b.status}
+                      onChange={(e) => updateBookingStatus(b._id, e.target.value)}
+                      className="text-xs border rounded px-2 py-1 focus:ring-secondary-300 focus:border-secondary-300"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="confirmed">Confirmed</option>
+                      <option value="cancelled">Cancelled</option>
+                      <option value="postponed">Postponed</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       )}
-
-      {postponeTarget && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full">
-            <h2 className="text-lg font-semibold mb-4">
-              New date for {postponeTarget.name}
-            </h2>
-            <input
-              type="date"
-              defaultValue={postponeTarget.date}
-              className="w-full border rounded px-4 py-2 mb-4"
-              onChange={e =>
-                setPostponeTarget({ ...postponeTarget, date: e.target.value })
-              }
-            />
-            <div className="flex justify-end space-x-2">
-              <button
-                className="px-4 py-2 text-sm bg-gray-200 rounded"
-                onClick={() => setPostponeTarget(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 text-sm bg-yellow-500 text-white rounded"
-                onClick={() => {
-                  updateStatus(postponeTarget._id, 'postponed', postponeTarget.date)
-                  setPostponeTarget(null)
-                }}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </main>
+    </div>
   )
 }

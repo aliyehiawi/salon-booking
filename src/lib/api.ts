@@ -13,3 +13,19 @@ export async function submitBooking(data: any) {
 
   return res.json()
 }
+
+export async function getServices() {
+  const res = await fetch('/api/services')
+  if (!res.ok) {
+    throw new Error('Failed to fetch services')
+  }
+  return res.json()
+}
+
+export async function getAvailableSlots(date: string, serviceId: string) {
+  const res = await fetch(`/api/bookings/available-slots?date=${date}&serviceId=${serviceId}`)
+  if (!res.ok) {
+    throw new Error('Failed to fetch available slots')
+  }
+  return res.json()
+}

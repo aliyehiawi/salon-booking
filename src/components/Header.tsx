@@ -1,7 +1,9 @@
 // src/components/Header.tsx
 'use client'
-
+import BookingModal from './BookingModal'
 import Image from 'next/image'
+import Link from 'next/link'
+import { Shield } from 'lucide-react'
 
 export default function Header() {
   return (
@@ -19,9 +21,17 @@ export default function Header() {
             Bliss Hair Studio
           </span>
         </div>
-        <button className="bg-secondary-500 hover:bg-secondary-600 text-white px-4 py-2 rounded-full font-medium transition-colors duration-200">
-          Book Now
-        </button>
+        <div className="flex items-center space-x-4">
+          <BookingModal />
+          <Link
+            href="/admin/login"
+            className="bg-secondary-500 hover:bg-secondary-600 text-white rounded-full font-medium transition-colors duration-200 px-4 py-2 flex items-center space-x-2"
+            title="Admin Login"
+          >
+            <Shield className="w-4 h-4" />
+            <span>Admin</span>
+          </Link>
+        </div>
       </nav>
     </header>
   )

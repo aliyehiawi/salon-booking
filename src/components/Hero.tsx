@@ -15,7 +15,8 @@ export default function Hero() {
           <p className="text-lg text-primary-700 mb-6">
             Experience premium hair care in our relaxing studio with expert stylists.
           </p>
-          <BookingModal />
+          {/* Pass a larger size only for Hero */}
+          <BookingModal buttonClassName="px-6 py-3 text-lg" />
         </div>
         <div className="md:w-1/2 flex justify-center">
           <Image
