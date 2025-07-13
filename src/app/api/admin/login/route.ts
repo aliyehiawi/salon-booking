@@ -8,17 +8,18 @@ import { signToken } from '@/lib/auth'
 export async function POST(req: NextRequest) {
   await dbConnect()
   const { email, password } = await req.json()
-
-  const user = await AdminUser.findOne({ email })
-  if (!user) {
-    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+  try {
+    const user = await AdminUser.findOne({ email })
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    }
+    const valid = await bcrypt.compare(password, user.password)
+    if (!valid) {
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    }
+    const token = signToken({ id: user._id, email: user.email })
+    return NextResponse.json({ token })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
-
-  const valid = await bcrypt.compare(password, user.password)
-  if (!valid) {
-    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
-  }
-
-  const token = signToken({ id: user._id, email: user.email })
-  return NextResponse.json({ token })
 }
