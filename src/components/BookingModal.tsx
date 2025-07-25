@@ -19,6 +19,7 @@ import {
 } from 'date-fns'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import { useToast } from '@/context/ToastContext'
 
 const steps = ['Service', 'Date & Time', 'Your Info', 'Confirm']
 
@@ -52,9 +53,57 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
   })
 
   const [services, setServices] = useState<Service[]>([])
-  const [loading, setLoading] = useState(false)
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
+  const { showToast } = useToast()
+
+  // Inline validation state
+  const [nameError, setNameError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
+
+  // Validation functions
+  const validateName = (name: string) => {
+    if (!name.trim()) return 'Full name is required'
+    return null
+  }
+  const validateEmail = (email: string) => {
+    const emailRegex = /^\S+@\S+\.\S+$/
+    if (!email.trim()) return 'Email is required'
+    if (!emailRegex.test(email)) return 'Please enter a valid email address'
+    return null
+  }
+  const validatePhone = (phone: string) => {
+    const phoneRegex = /^\+?\d{10,15}$/
+    if (!phone.trim()) return 'Phone number is required'
+    if (!phoneRegex.test(phone)) return 'Please enter a valid phone number (digits only, 10-15 digits)'
+    return null
+  }
+
+  // Handlers for real-time validation
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBooking(b => ({ ...b, name: e.target.value }))
+    setNameError(validateName(e.target.value))
+  }
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBooking(b => ({ ...b, email: e.target.value }))
+    setEmailError(validateEmail(e.target.value))
+  }
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBooking(b => ({ ...b, phone: e.target.value }))
+    setPhoneError(validatePhone(e.target.value))
+  }
+
+  // Validate on blur as well
+  const handleNameBlur = () => setNameError(validateName(booking.name))
+  const handleEmailBlur = () => setEmailError(validateEmail(booking.email))
+  const handlePhoneBlur = () => setPhoneError(validatePhone(booking.phone))
+
+  // Check if step 3 is valid
+  const isStep3Valid =
+    !validateName(booking.name) &&
+    !validateEmail(booking.email) &&
+    !validatePhone(booking.phone)
 
   // Reset form when modal opens/closes
   const resetForm = () => {
@@ -377,9 +426,16 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                       type="text"
                       id="fullName"
                       value={booking.name}
-                      onChange={e => setBooking(b => ({ ...b, name: e.target.value }))}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-secondary-300 focus:border-secondary-300"
+                      onChange={handleNameChange}
+                      onBlur={handleNameBlur}
+                      className={clsx(
+                        "w-full px-4 py-2 border rounded-lg focus:ring-secondary-300 focus:border-secondary-300",
+                        nameError && 'border-red-400'
+                      )}
                     />
+                    {nameError && (
+                      <p className="text-xs text-red-500 mt-1">{nameError}</p>
+                    )}
                   </div>
 
                   <div>
@@ -393,9 +449,16 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                       type="email"
                       id="email"
                       value={booking.email}
-                      onChange={e => setBooking(b => ({ ...b, email: e.target.value }))}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-secondary-300 focus:border-secondary-300"
+                      onChange={handleEmailChange}
+                      onBlur={handleEmailBlur}
+                      className={clsx(
+                        "w-full px-4 py-2 border rounded-lg focus:ring-secondary-300 focus:border-secondary-300",
+                        emailError && 'border-red-400'
+                      )}
                     />
+                    {emailError && (
+                      <p className="text-xs text-red-500 mt-1">{emailError}</p>
+                    )}
                   </div>
 
                   <div>
@@ -409,9 +472,16 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                       type="tel"
                       id="phone"
                       value={booking.phone}
-                      onChange={e => setBooking(b => ({ ...b, phone: e.target.value }))}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-secondary-300 focus:border-secondary-300"
+                      onChange={handlePhoneChange}
+                      onBlur={handlePhoneBlur}
+                      className={clsx(
+                        "w-full px-4 py-2 border rounded-lg focus:ring-secondary-300 focus:border-secondary-300",
+                        phoneError && 'border-red-400'
+                      )}
                     />
+                    {phoneError && (
+                      <p className="text-xs text-red-500 mt-1">{phoneError}</p>
+                    )}
                   </div>
 
                   <div>
@@ -443,13 +513,29 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                   <button
                     id="nextToStep4"
                     type="button"
-                    onClick={() => setStep(4)}
-                    disabled={
-                      !booking.name ||
-                      !/^\S+@\S+\.\S+$/.test(booking.email) ||
-                      !booking.phone
-                    }
-                    className="bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 disabled:opacity-50"
+                    onClick={() => {
+                      // Validate all fields before proceeding
+                      const nErr = validateName(booking.name)
+                      const eErr = validateEmail(booking.email)
+                      const pErr = validatePhone(booking.phone)
+                      setNameError(nErr)
+                      setEmailError(eErr)
+                      setPhoneError(pErr)
+                      if (nErr || eErr || pErr) {
+                        // Scroll to first error
+                        setTimeout(() => {
+                          const el = document.querySelector('.border-red-400')
+                          if (el) (el as HTMLElement).focus()
+                        }, 0)
+                        return
+                      }
+                      setStep(4)
+                    }}
+                    disabled={!isStep3Valid}
+                    className={clsx(
+                      "bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-2 rounded-full font-medium transition-colors duration-200 disabled:opacity-50",
+                      !isStep3Valid ? 'cursor-not-allowed' : ''
+                    )}
                   >
                     Next
                   </button>
@@ -539,7 +625,7 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                       Appointment Confirmed!
                     </h4>
                     <p className="text-gray-600 mb-6">
-                      We've sent a confirmation email with all the details.
+                      We&apos;ve sent a confirmation email with all the details.
                     </p>
                     <button
                       id="closeAfterSuccess"
@@ -566,6 +652,22 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                       disabled={!agreed || submitting}
                       onClick={async () => {
                         if (submitting) return
+                        // --- Frontend validation ---
+                        const nErr = validateName(booking.name)
+                        const eErr = validateEmail(booking.email)
+                        const pErr = validatePhone(booking.phone)
+                        if (nErr) {
+                          showToast(nErr, 'error')
+                          return
+                        }
+                        if (eErr) {
+                          showToast(eErr, 'error')
+                          return
+                        }
+                        if (pErr) {
+                          showToast(pErr, 'error')
+                          return
+                        }
                         setSubmitting(true)
                         try {
                           await submitBooking(booking)
@@ -574,8 +676,27 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                           document.getElementById('successMessage')!.classList.remove('hidden')
                           // Hide navigation buttons to prevent further interaction
                           document.querySelector('#step4 .mt-6')!.classList.add('hidden')
-                        } catch (err: any) {
-                          alert('❌ ' + err.message)
+                          showToast('Appointment confirmed!', 'success')
+                        } catch (err: unknown) {
+                            // Try to extract error message from API response
+                            let msg = 'Failed to submit booking.'
+                            // If error is a Response (from fetch), parse JSON
+                            if (err instanceof Response) {
+                              try {
+                                const data = await err.json()
+                                if (data && data.error) msg = data.error
+                              } catch {}
+                            } else if (typeof err === 'object' && err !== null && 'message' in err && typeof (err as Record<string, unknown>).message === 'string') {
+                              try {
+                                const parsed = JSON.parse((err as { message: string }).message)
+                                msg = parsed.error || msg
+                              } catch {
+                                msg = (err as { message: string }).message
+                              }
+                            } else if (typeof err === 'string') {
+                              msg = err
+                            }
+                            showToast(msg, 'error')
                         } finally {
                           setSubmitting(false)
                         }

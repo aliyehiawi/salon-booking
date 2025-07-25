@@ -31,7 +31,7 @@
     "@tailwindcss/postcss": "^4.1.11",
     "@types/bcrypt": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^20",
+    "@types/node": "^20.19.9",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.21",
@@ -39,6 +39,7 @@
     "eslint-config-next": "15.3.5",
     "postcss": "^8.4.38",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

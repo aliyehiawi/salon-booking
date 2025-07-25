@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Calendar, Settings, LogOut, Users, Clock } from 'lucide-react'
+import { Calendar, Settings, LogOut, Users, Clock, Home } from 'lucide-react'
 
 export default function AdminLayout({
   children,
@@ -74,6 +74,12 @@ export default function AdminLayout({
       label: 'Services',
       icon: Settings,
       description: 'Manage salon services'
+    },
+    {
+      href: '/admin/settings',
+      label: 'Settings',
+      icon: Settings,
+      description: 'Business hours, holidays, limits'
     }
   ]
 
@@ -86,13 +92,23 @@ export default function AdminLayout({
             <div className="flex items-center">
               <h1 className="text-xl font-semibold text-gray-900">Salon Admin</h1>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center text-sm text-gray-500 hover:text-gray-700"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </button>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/"
+                className="flex items-center text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded px-3 py-1 transition"
+                title="Back to Website"
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Back to Website
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center text-sm text-gray-500 hover:text-gray-700"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>

@@ -4,8 +4,18 @@ import BookingModal from './BookingModal'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Shield } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 export default function Header() {
+  const [adminHref, setAdminHref] = useState('/admin/login')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('adminToken')
+      setAdminHref(token ? '/admin' : '/admin/login')
+    }
+  }, [])
+
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
       <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
@@ -24,7 +34,7 @@ export default function Header() {
         <div className="flex items-center space-x-4">
           <BookingModal />
           <Link
-            href="/admin/login"
+            href={adminHref}
             className="bg-secondary-500 hover:bg-secondary-600 text-white rounded-full font-medium transition-colors duration-200 px-4 py-2 flex items-center space-x-2"
             title="Admin Login"
           >
