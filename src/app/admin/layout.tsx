@@ -4,61 +4,37 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Calendar, Settings, LogOut, Users, Clock, Home } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const [checkingAuth, setCheckingAuth] = useState(true)
-  const [authenticated, setAuthenticated] = useState(false)
+  const { user, logout } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
-  // Check if we're on the login page
-  const isLoginPage = pathname === '/admin/login'
-
-  // Authentication check - skip for login page
+  // Check if user is authenticated and is admin
   useEffect(() => {
-    if (isLoginPage) {
-      setCheckingAuth(false)
+    if (!user) {
+      router.replace('/login')
       return
     }
-
-    const checkAuth = async () => {
-      const token = localStorage.getItem('adminToken')
-      if (!token) {
-        router.replace('/admin/login')
-        setCheckingAuth(false)
-        return
-      }
-      try {
-        const res = await fetch('/api/admin/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok) throw new Error()
-        setAuthenticated(true)
-      } catch {
-        router.replace('/admin/login')
-      } finally {
-        setCheckingAuth(false)
-      }
+    
+    if (user.type !== 'admin') {
+      router.replace('/')
+      return
     }
-    checkAuth()
-  }, [router, isLoginPage])
+  }, [user, router])
 
   const handleLogout = () => {
-    localStorage.removeItem('adminToken')
-    router.replace('/admin/login')
-  }
-
-  // For login page, render children directly without layout
-  if (isLoginPage) {
-    return <>{children}</>
+    logout()
+    router.replace('/login')
   }
 
   // Guard – render nothing until auth check completes
-  if (checkingAuth || !authenticated) {
+  if (!user || user.type !== 'admin') {
     return null
   }
 

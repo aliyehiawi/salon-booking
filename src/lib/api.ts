@@ -1,8 +1,13 @@
 // src/lib/api.ts
-export async function submitBooking(data: any) {
+export async function submitBooking(data: any, token?: string | null) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  
   const res = await fetch('/api/bookings', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data),
   })
 

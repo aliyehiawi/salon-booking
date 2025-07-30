@@ -11,6 +11,7 @@ const bookingSchema = new mongoose.Schema(
     email:      { type: String, required: true },
     phone:      { type: String, required: true },
     notes:      { type: String },
+    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }, // Optional customer reference
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'cancelled', 'postponed'],

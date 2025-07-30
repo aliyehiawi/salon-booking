@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { X, LogIn } from 'lucide-react'
 import clsx from 'classnames'
 import { submitBooking, getServices, getAvailableSlots } from '@/lib/api'
 import {
@@ -20,6 +20,8 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { useToast } from '@/context/ToastContext'
+import { useAuth } from '@/context/AuthContext'
+import AuthModal from './AuthModal'
 
 const steps = ['Service', 'Date & Time', 'Your Info', 'Confirm']
 
@@ -41,6 +43,7 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
   const [step, setStep] = useState(1)
   const [agreed, setAgreed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const [booking, setBooking] = useState({
     serviceId: '',
     serviceName: '',
@@ -56,6 +59,7 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
   const { showToast } = useToast()
+  const { user, token } = useAuth()
 
   // Inline validation state
   const [nameError, setNameError] = useState<string | null>(null)
@@ -115,12 +119,24 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
       serviceName: '',
       date: '',
       time: '',
-      name: '',
-      email: '',
-      phone: '',
+      name: user?.type === 'customer' ? user.name || '' : '',
+      email: user?.email || '',
+      phone: user?.type === 'customer' ? user.phone || '' : '',
       notes: '',
     })
   }
+
+  // Auto-fill customer info when customer is logged in
+  useEffect(() => {
+    if (user?.type === 'customer' && step === 3) {
+      setBooking(prev => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email,
+        phone: user.phone || ''
+      }))
+    }
+  }, [user, step])
 
   const handleOpenModal = () => {
     setVisible(true)
@@ -356,23 +372,37 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                           Loading slots...
                         </div>
                       ) : availableSlots.length > 0 ? (
-                        availableSlots.map((slot) => (
-                          <button
-                            key={slot}
-                            type="button"
-                            onClick={() =>
-                              setBooking(b => ({ ...b, time: slot }))
-                            }
-                            className={clsx(
-                              'py-2 px-3 rounded w-full',
-                              booking.time === slot
-                                ? 'bg-secondary-500 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            )}
-                          >
-                            {slot}
-                          </button>
-                        ))
+                        availableSlots.map((slot) => {
+                          // Convert display time (e.g., "2:30 PM") to 24-hour format (e.g., "14:30")
+                          const convertTo24Hour = (displayTime: string) => {
+                            const [time, period] = displayTime.split(' ')
+                            const [hour, minute] = time.split(':')
+                            let hour24 = parseInt(hour)
+                            if (period === 'PM' && hour24 !== 12) hour24 += 12
+                            if (period === 'AM' && hour24 === 12) hour24 = 0
+                            return `${hour24.toString().padStart(2, '0')}:${minute}`
+                          }
+                          
+                          const time24Hour = convertTo24Hour(slot)
+                          
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() =>
+                                setBooking(b => ({ ...b, time: time24Hour }))
+                              }
+                              className={clsx(
+                                'py-2 px-3 rounded w-full',
+                                booking.time === time24Hour
+                                  ? 'bg-secondary-500 text-white'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              )}
+                            >
+                              {slot}
+                            </button>
+                          )
+                        })
                       ) : (
                         <div className="text-center py-2 px-3 bg-gray-100 rounded text-gray-400 col-span-full">
                           {booking.date && booking.serviceId ? 'No available slots' : 'Select a date and service first'}
@@ -410,9 +440,21 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                   step !== 3 && 'hidden'
                 )}
               >
-                <h4 className="font-heading text-lg font-semibold mb-4">
-                  Your Information
-                </h4>
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-heading text-lg font-semibold">
+                    Your Information
+                  </h4>
+                  {!user || user.type !== 'customer' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAuthModal(true)}
+                      className="flex items-center text-secondary-600 hover:text-secondary-700 text-sm font-medium"
+                    >
+                      <LogIn className="w-4 h-4 mr-1" />
+                      Sign in to auto-fill
+                    </button>
+                  )}
+                </div>
 
                 <div className="space-y-4">
                   <div>
@@ -577,7 +619,14 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                             {booking.date && format(parseISO(booking.date), 'EEEE, MMMM d, yyyy')}
                           </p>
                           <p id="confirmTime" className="text-gray-600">
-                            {booking.time}
+                            {(() => {
+                              // Convert 24-hour format back to 12-hour display format
+                              const [hour, minute] = booking.time.split(':')
+                              const hourNum = parseInt(hour)
+                              const ampm = hourNum >= 12 ? 'PM' : 'AM'
+                              const displayHour = hourNum % 12 === 0 ? 12 : hourNum % 12
+                              return `${displayHour}:${minute} ${ampm}`
+                            })()}
                           </p>
                         </div>
                       </div>
@@ -670,7 +719,7 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                         }
                         setSubmitting(true)
                         try {
-                          await submitBooking(booking)
+                          await submitBooking(booking, token)
                           // hide content, show success
                           document.getElementById('confirmationContent')!.classList.add('hidden')
                           document.getElementById('successMessage')!.classList.remove('hidden')
@@ -718,6 +767,13 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
           </div>
         </div>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        visible={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        defaultMode="login"
+      />
     </>
   )
 }
