@@ -3,18 +3,18 @@
 import BookingModal from './BookingModal'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Shield } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Shield, User } from 'lucide-react'
+import { useState } from 'react'
+import { useAuth } from '@/context/AuthContext'
+import AuthModal from './AuthModal'
+import CustomerProfile from './CustomerProfile'
+import BookingHistory from './BookingHistory'
 
 export default function Header() {
-  const [adminHref, setAdminHref] = useState('/admin/login')
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('adminToken')
-      setAdminHref(token ? '/admin' : '/admin/login')
-    }
-  }, [])
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [showBookingHistory, setShowBookingHistory] = useState(false)
+  const { user } = useAuth()
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
@@ -33,16 +33,66 @@ export default function Header() {
         </div>
         <div className="flex items-center space-x-4">
           <BookingModal />
-          <Link
-            href={adminHref}
-            className="bg-secondary-500 hover:bg-secondary-600 text-white rounded-full font-medium transition-colors duration-200 px-4 py-2 flex items-center space-x-2"
-            title="Admin Login"
-          >
-            <Shield className="w-4 h-4" />
-            <span>Admin</span>
-          </Link>
+          
+          {/* User Authentication */}
+          {user ? (
+            <div className="flex items-center space-x-2">
+              {user.type === 'customer' ? (
+                <>
+                  <button
+                    onClick={() => setShowBookingHistory(true)}
+                    className="text-secondary-600 hover:text-secondary-700 font-medium transition-colors duration-200 px-3 py-2"
+                  >
+                    My Bookings
+                  </button>
+                  <button
+                    onClick={() => setShowProfileModal(true)}
+                    className="bg-secondary-500 hover:bg-secondary-600 text-white rounded-full font-medium transition-colors duration-200 px-4 py-2 flex items-center space-x-2"
+                  >
+                    <User className="w-4 h-4" />
+                    <span>{user.name?.split(' ')[0] || 'Customer'}</span>
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/admin"
+                  className="bg-secondary-500 hover:bg-secondary-600 text-white rounded-full font-medium transition-colors duration-200 px-4 py-2 flex items-center space-x-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Admin Panel</span>
+                </Link>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="bg-secondary-500 hover:bg-secondary-600 text-white rounded-full font-medium transition-colors duration-200 px-4 py-2 flex items-center space-x-2"
+            >
+              <User className="w-4 h-4" />
+              <span>Sign In</span>
+            </Link>
+          )}
+
+
         </div>
       </nav>
+
+      {/* Modals */}
+      <AuthModal
+        visible={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        defaultMode="login"
+      />
+      
+      <CustomerProfile
+        visible={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
+      
+      <BookingHistory
+        visible={showBookingHistory}
+        onClose={() => setShowBookingHistory(false)}
+      />
     </header>
   )
 }

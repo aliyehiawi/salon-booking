@@ -1,7 +1,7 @@
-// src/app/api/admin/login/route.ts
+// src/app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/dbConnect'
-import AdminUser from '@/models/AdminUser'
+import Customer from '@/models/Customer'
 import bcrypt from 'bcrypt'
 import { signToken } from '@/lib/auth'
 
@@ -9,17 +9,29 @@ export async function POST(req: NextRequest) {
   await dbConnect()
   const { email, password } = await req.json()
   try {
-    const user = await AdminUser.findOne({ email })
-    if (!user) {
+    const customer = await Customer.findOne({ email })
+    if (!customer) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
-    const valid = await bcrypt.compare(password, user.password)
+    const valid = await bcrypt.compare(password, customer.password)
     if (!valid) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
-    const token = signToken({ id: user._id, email: user.email })
-    return NextResponse.json({ token })
+    const token = signToken({ 
+      id: customer._id, 
+      email: customer.email,
+      type: 'customer'
+    })
+    return NextResponse.json({ 
+      token,
+      customer: {
+        id: customer._id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone
+      }
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
-}
+} 

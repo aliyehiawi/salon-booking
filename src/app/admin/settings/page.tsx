@@ -21,7 +21,10 @@ export default function AdminSettingsPage() {
   const [form, setForm] = useState<any>(null);
 
   useEffect(() => {
-    fetch("/api/admin/settings")
+    const token = localStorage.getItem('authToken')
+    fetch("/api/admin/settings", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .then((r) => r.json())
       .then((data) => {
         setSettings(data);
@@ -72,9 +75,13 @@ export default function AdminSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const token = localStorage.getItem('authToken')
       const res = await fetch("/api/admin/settings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error("Failed to save settings");

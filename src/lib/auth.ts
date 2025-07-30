@@ -19,7 +19,7 @@ export function verifyToken(req: NextRequest) {
 export async function verifyTokenString(token: string) {
   try {
     return jwt.verify(token, process.env.JWT_SECRET!)
-  } catch (error) {
+  } catch {
     return null
   }
 }

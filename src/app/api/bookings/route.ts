@@ -2,11 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/dbConnect'
 import Booking from '@/models/Booking'
 import BusinessSettings from '@/models/BusinessSettings'
+import { verifyTokenString } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   await dbConnect()
   try {
     const data = await req.json()
+    
+    // Check for customer authentication
+    let customerId = null
+    const authHeader = req.headers.get('authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7)
+      const decoded = await verifyTokenString(token) as { id: string; type: string } | null
+      if (decoded && decoded.type === 'customer') {
+        customerId = decoded.id
+      }
+    }
 
     // Get business settings
     const settings = await BusinessSettings.findOne()
@@ -121,7 +133,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const booking = await Booking.create(data)
+    const booking = await Booking.create({
+      ...data,
+      customerId
+    })
     return NextResponse.json({ message: 'Booking saved', booking }, { status: 201 })
   } catch (err) {
     if (err instanceof Error) {
@@ -136,7 +151,8 @@ export async function GET() {
   try {
     const bookings = await Booking.find().sort({ createdAt: -1 })
     return NextResponse.json(bookings)
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

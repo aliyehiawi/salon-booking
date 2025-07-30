@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
     }
     
     const token = authHeader.substring(7)
-    const decoded = await verifyTokenString(token)
-    if (!decoded) {
+    const decoded = await verifyTokenString(token) as any
+    if (!decoded || decoded.type !== 'admin') {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
     }
     
     const token = authHeader.substring(7)
-    const decoded = await verifyTokenString(token)
-    if (!decoded) {
+    const decoded = await verifyTokenString(token) as any
+    if (!decoded || decoded.type !== 'admin') {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 

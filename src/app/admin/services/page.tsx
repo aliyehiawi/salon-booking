@@ -28,7 +28,7 @@ export default function AdminServicesPage() {
 
   const getToken = () => {
     const token = typeof window !== 'undefined'
-      ? localStorage.getItem('adminToken')
+      ? localStorage.getItem('authToken')
       : null
     if (!token) {
       throw new Error('Missing token')

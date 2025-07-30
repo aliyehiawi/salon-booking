@@ -31,7 +31,7 @@ export default function AdminPage() {
     const fetchBookings = async () => {
       setLoading(true)
       try {
-        const token = localStorage.getItem('adminToken')
+        const token = localStorage.getItem('authToken')
         const res = await fetch('/api/admin/bookings', {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -80,7 +80,7 @@ export default function AdminPage() {
 
   const updateBookingStatus = async (bookingId: string, newStatus: string) => {
     try {
-      const token = localStorage.getItem('adminToken')
+      const token = localStorage.getItem('authToken')
       const res = await fetch(`/api/admin/bookings/${bookingId}`, {
         method: 'PATCH',
         headers: { 
