@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Calendar, Settings, LogOut, Users, Clock, Home } from 'lucide-react'
+import { Calendar, Settings, LogOut, Users, Clock, Home, BarChart3 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 
 export default function AdminLayout({
@@ -40,10 +40,28 @@ export default function AdminLayout({
 
   const navItems = [
     {
+      href: '/admin/dashboard',
+      label: 'Dashboard',
+      icon: BarChart3,
+      description: 'Analytics and overview'
+    },
+    {
       href: '/admin',
       label: 'Appointments',
       icon: Calendar,
       description: 'View and manage bookings'
+    },
+    {
+      href: '/admin/calendar',
+      label: 'Calendar',
+      icon: Calendar,
+      description: 'Calendar view of appointments'
+    },
+    {
+      href: '/admin/customers',
+      label: 'Customers',
+      icon: Users,
+      description: 'Manage customer database'
     },
     {
       href: '/admin/services',
@@ -91,7 +109,7 @@ export default function AdminLayout({
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
