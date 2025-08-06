@@ -16,19 +16,20 @@ export async function GET(req: NextRequest) {
     }
 
     // Get business settings
-    const settings = await BusinessSettings.findOne()
+    const settings = await BusinessSettings.getSettings()
     if (!settings) {
       return NextResponse.json({ error: 'Business settings not found' }, { status: 500 })
     }
 
-    // Check if date is a holiday/closed
-    if (settings.holidays.includes(date)) {
-      return NextResponse.json({ slots: [], reason: 'Closed for holiday' })
+    // Check if business is open on this date
+    const selectedDate = new Date(date)
+    if (!settings.isOpenOn(selectedDate)) {
+      return NextResponse.json({ slots: [], reason: 'Business is closed on this date' })
     }
 
     // Check max bookings per day
     const bookingsCount = await Booking.countDocuments({ date, status: { $ne: 'cancelled' } })
-    if (bookingsCount >= settings.maxBookingsPerDay) {
+    if (bookingsCount >= settings.bookingSettings.maxBookingsPerDay) {
       return NextResponse.json({ slots: [], reason: 'Fully booked for this day' })
     }
 
@@ -48,12 +49,12 @@ export async function GET(req: NextRequest) {
     // Get business hours for the day
     const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
     const hours = settings.businessHours[dayOfWeek]
-    if (!hours || !hours.open || !hours.close) {
+    if (!hours || !hours.isOpen) {
       return NextResponse.json({ slots: [], reason: 'Closed on this day' })
     }
     const [startHour, startMinute] = hours.open.split(':').map(Number)
     const [endHour, endMinute] = hours.close.split(':').map(Number)
-    const slotInterval = 15 // 15-minute intervals
+    const slotInterval = settings.bookingSettings.timeSlotDuration || 15
     const allSlots: { time: string; displayTime: string; available: boolean }[] = []
 
     // Generate all possible time slots within business hours
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Mark slots as unavailable if they conflict with existing bookings (add break time after each booking)
-    const breakMinutes = settings.breakMinutes || 0
+    const breakMinutes = settings.bookingSettings.breakMinutes || 0
     existingBookings.forEach(booking => {
       const bookingStart = booking.time
       // Get the duration of the existing booking's service
@@ -122,6 +123,7 @@ export async function GET(req: NextRequest) {
     })
 
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('Error fetching available slots:', err)
+    return NextResponse.json({ error: 'Failed to fetch available slots' }, { status: 500 })
   }
 } 

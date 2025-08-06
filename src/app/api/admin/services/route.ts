@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
     const services = await Service.find().sort({ createdAt: 1 })
     return NextResponse.json(services)
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('Error fetching services:', err)
+    return NextResponse.json({ error: 'Failed to fetch services' }, { status: 500 })
   }
 }
 
@@ -41,15 +42,39 @@ export async function POST(req: NextRequest) {
 
     const { name, description, duration, price } = await req.json()
 
+    // Input validation
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return NextResponse.json({ error: 'Service name is required' }, { status: 400 })
+    }
+
+    if (!description || typeof description !== 'string' || description.trim().length === 0) {
+      return NextResponse.json({ error: 'Service description is required' }, { status: 400 })
+    }
+
+    if (!duration || typeof duration !== 'number' || duration <= 0) {
+      return NextResponse.json({ error: 'Valid duration is required' }, { status: 400 })
+    }
+
+    if (!price || typeof price !== 'string' || price.trim().length === 0) {
+      return NextResponse.json({ error: 'Service price is required' }, { status: 400 })
+    }
+
+    // Check if service with same name already exists
+    const existingService = await Service.findOne({ name: name.trim() })
+    if (existingService) {
+      return NextResponse.json({ error: 'Service with this name already exists' }, { status: 409 })
+    }
+
     const svc = await Service.create({
-      name,
-      description,
+      name: name.trim(),
+      description: description.trim(),
       duration,
-      price
+      price: price.trim()
     })
 
     return NextResponse.json(svc, { status: 201 })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('Error creating service:', err)
+    return NextResponse.json({ error: 'Failed to create service' }, { status: 500 })
   }
 }

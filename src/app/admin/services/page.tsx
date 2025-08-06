@@ -83,6 +83,24 @@ export default function AdminServicesPage() {
   }
 
   const handleSubmit = async () => {
+    // Client-side validation
+    if (!form.name.trim()) {
+      showToast('Service name is required', 'error')
+      return
+    }
+    if (!form.description.trim()) {
+      showToast('Service description is required', 'error')
+      return
+    }
+    if (!form.duration.trim()) {
+      showToast('Service duration is required', 'error')
+      return
+    }
+    if (!form.price.trim()) {
+      showToast('Service price is required', 'error')
+      return
+    }
+
     try {
       const token = getToken()
       const url = editingId
@@ -90,7 +108,16 @@ export default function AdminServicesPage() {
         : '/api/admin/services'
       const method = editingId ? 'PATCH' : 'POST'
 
-      const payload = { ...form }
+      // Convert duration to number for API
+      const durationMatch = form.duration.match(/(\d+)/)
+      const duration = durationMatch ? parseInt(durationMatch[1]) : 60
+
+      const payload = {
+        name: form.name.trim(),
+        description: form.description.trim(),
+        duration,
+        price: form.price.trim()
+      }
 
       const res = await fetch(url, {
         method,
@@ -100,17 +127,19 @@ export default function AdminServicesPage() {
         },
         body: JSON.stringify(payload),
       })
+      
       if (!res.ok) {
         const { error } = await res.json()
         throw new Error(error || 'Save failed')
       }
+      
       const saved = await res.json()
       if (editingId) {
         setServices(s => s.map(x => x._id === editingId ? saved : x))
-        showToast('Service updated', 'success')
+        showToast('Service updated successfully', 'success')
       } else {
         setServices(s => [saved, ...s])
-        showToast('Service created', 'success')
+        showToast('Service created successfully', 'success')
       }
       setModalOpen(false)
     } catch (err: any) {

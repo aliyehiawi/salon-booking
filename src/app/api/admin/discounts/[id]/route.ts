@@ -46,7 +46,8 @@ export async function PATCH(
 
     return NextResponse.json(discount)
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('Error updating discount:', err)
+    return NextResponse.json({ error: 'Failed to update discount' }, { status: 500 })
   }
 }
 
@@ -75,6 +76,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Discount deleted successfully' })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('Error deleting discount:', err)
+    return NextResponse.json({ error: 'Failed to delete discount' }, { status: 500 })
   }
 } 
