@@ -137,7 +137,11 @@ export async function POST(req: NextRequest) {
       ...data,
       customerId
     })
-    return NextResponse.json({ message: 'Booking saved', booking }, { status: 201 })
+    return NextResponse.json({ 
+      message: 'Booking saved', 
+      booking,
+      bookingId: booking._id 
+    }, { status: 201 })
   } catch (err) {
     if (err instanceof Error) {
       return NextResponse.json({ error: err.message }, { status: 500 })

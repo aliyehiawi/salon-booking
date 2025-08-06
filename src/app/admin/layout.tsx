@@ -3,15 +3,17 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Calendar, Settings, LogOut, Users, Clock, Home, BarChart3 } from 'lucide-react'
+import { Calendar, Settings, LogOut, Users, Clock, Home, BarChart3, Building2, Tag, Award } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { useToast } from '@/context/ToastContext'
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { user, logout } = useAuth()
+  const { user, logout, handleApiError } = useAuth()
+  const { showToast } = useToast()
   const router = useRouter()
   const pathname = usePathname()
 
@@ -23,18 +25,31 @@ export default function AdminLayout({
     }
     
     if (user.type !== 'admin') {
+      showToast('Access denied. Admin privileges required.', 'error')
       router.replace('/')
       return
     }
-  }, [user, router])
+  }, [user, router, showToast])
 
   const handleLogout = () => {
     logout()
     router.replace('/login')
   }
 
-  // Guard – render nothing until auth check completes
-  if (!user || user.type !== 'admin') {
+  // Show loading state while checking authentication
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Guard – render nothing if not admin
+  if (user.type !== 'admin') {
     return null
   }
 
@@ -68,6 +83,24 @@ export default function AdminLayout({
       label: 'Services',
       icon: Settings,
       description: 'Manage salon services'
+    },
+    {
+      href: '/admin/salon-info',
+      label: 'Salon Info',
+      icon: Building2,
+      description: 'Manage salon details'
+    },
+    {
+      href: '/admin/discounts',
+      label: 'Discounts',
+      icon: Tag,
+      description: 'Manage discount codes'
+    },
+    {
+      href: '/admin/loyalty',
+      label: 'Loyalty',
+      icon: Award,
+      description: 'Customer tiers and badges'
     },
     {
       href: '/admin/settings',

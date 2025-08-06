@@ -22,6 +22,7 @@ import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
 import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import AuthModal from './AuthModal'
+import PaymentModal from './PaymentModal'
 
 const steps = ['Service', 'Date & Time', 'Your Info', 'Confirm']
 
@@ -44,6 +45,8 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
   const [agreed, setAgreed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [createdBookingId, setCreatedBookingId] = useState<string | null>(null)
   const [booking, setBooking] = useState({
     serviceId: '',
     serviceName: '',
@@ -719,13 +722,15 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
                         }
                         setSubmitting(true)
                         try {
-                          await submitBooking(booking, token)
-                          // hide content, show success
-                          document.getElementById('confirmationContent')!.classList.add('hidden')
-                          document.getElementById('successMessage')!.classList.remove('hidden')
-                          // Hide navigation buttons to prevent further interaction
-                          document.querySelector('#step4 .mt-6')!.classList.add('hidden')
-                          showToast('Appointment confirmed!', 'success')
+                          const result = await submitBooking(booking, token)
+                          setCreatedBookingId(result.bookingId)
+                          
+                          // Get service price for payment
+                          const selectedService = services.find(s => s._id === booking.serviceId)
+                          const servicePrice = selectedService ? parseFloat(selectedService.price) : 0
+                          
+                          // Show payment modal
+                          setShowPaymentModal(true)
                         } catch (err: unknown) {
                             // Try to extract error message from API response
                             let msg = 'Failed to submit booking.'
@@ -774,6 +779,29 @@ export default function BookingModal({ buttonClassName }: BookingModalProps) {
         onClose={() => setShowAuthModal(false)}
         defaultMode="login"
       />
+
+      {/* Payment Modal */}
+      {createdBookingId && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false)
+            setCreatedBookingId(null)
+            handleCloseModal()
+          }}
+          bookingId={createdBookingId}
+          amount={services.find(s => s._id === booking.serviceId)?.price ? parseFloat(services.find(s => s._id === booking.serviceId)!.price) : 0}
+          serviceName={booking.serviceName}
+          onSuccess={() => {
+            // hide content, show success
+            document.getElementById('confirmationContent')!.classList.add('hidden')
+            document.getElementById('successMessage')!.classList.remove('hidden')
+            // Hide navigation buttons to prevent further interaction
+            document.querySelector('#step4 .mt-6')!.classList.add('hidden')
+            showToast('Payment successful! Your appointment is confirmed.', 'success')
+          }}
+        />
+      )}
     </>
   )
 }

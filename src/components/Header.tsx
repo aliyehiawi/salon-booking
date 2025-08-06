@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import AuthModal from './AuthModal'
 import CustomerProfile from './CustomerProfile'
+import AdminProfile from './AdminProfile'
 import BookingHistory from './BookingHistory'
 
 export default function Header() {
@@ -54,13 +55,21 @@ export default function Header() {
                   </button>
                 </>
               ) : (
-                <Link
-                  href="/admin"
-                  className="bg-secondary-500 hover:bg-secondary-600 text-white rounded-full font-medium transition-colors duration-200 px-4 py-2 flex items-center space-x-2"
-                >
-                  <Shield className="w-4 h-4" />
-                  <span>Admin Panel</span>
-                </Link>
+                <>
+                  <Link
+                    href="/admin"
+                    className="text-secondary-600 hover:text-secondary-700 font-medium transition-colors duration-200 px-3 py-2"
+                  >
+                    Admin Panel
+                  </Link>
+                  <button
+                    onClick={() => setShowProfileModal(true)}
+                    className="bg-secondary-500 hover:bg-secondary-600 text-white rounded-full font-medium transition-colors duration-200 px-4 py-2 flex items-center space-x-2"
+                  >
+                    <Shield className="w-4 h-4" />
+                    <span>{user.email?.split('@')[0] || 'Admin'}</span>
+                  </button>
+                </>
               )}
             </div>
           ) : (
@@ -84,10 +93,17 @@ export default function Header() {
         defaultMode="login"
       />
       
-      <CustomerProfile
-        visible={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
-      />
+      {user?.type === 'customer' ? (
+        <CustomerProfile
+          visible={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+        />
+      ) : (
+        <AdminProfile
+          visible={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+        />
+      )}
       
       <BookingHistory
         visible={showBookingHistory}

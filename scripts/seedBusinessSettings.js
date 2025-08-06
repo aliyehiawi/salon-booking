@@ -5,7 +5,6 @@ const path = require('path');
 // ─── 0) Load environment variables ───────────────────────────────────────────
 // Adjust the filenames below to wherever you keep your connection string.
 // This will populate `process.env.MONGODB_URI`, etc.
-require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 // ─── 1) Hook ts-node so we can import .ts files ──────────────────────────────

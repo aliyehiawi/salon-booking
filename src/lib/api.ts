@@ -16,7 +16,11 @@ export async function submitBooking(data: any, token?: string | null) {
     throw new Error(error.error || error.message || 'Failed to submit booking')
   }
 
-  return res.json()
+  const result = await res.json()
+  return {
+    ...result,
+    bookingId: result.bookingId || result.booking?._id
+  }
 }
 
 export async function getServices() {
