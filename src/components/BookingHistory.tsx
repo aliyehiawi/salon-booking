@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Calendar, Clock, User, Phone, Mail, Edit, XCircle, CheckCircle, AlertCircle } from 'lucide-react'
+import { X, Calendar, Clock, User, Phone, Mail, Edit, XCircle, CheckCircle, AlertCircle, Star, MessageSquare } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
+import ReviewModal from './ReviewModal'
 
 interface Booking {
   _id: string
@@ -44,6 +45,8 @@ export default function BookingHistory({ visible, onClose }: BookingHistoryProps
   const [newTime, setNewTime] = useState('')
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
 
   useEffect(() => {
     if (visible && token && user?.type === 'customer') {
@@ -154,6 +157,11 @@ export default function BookingHistory({ visible, onClose }: BookingHistoryProps
     setNewTime('')
   }
 
+  const openReviewModal = (booking: Booking) => {
+    setSelectedBooking(booking)
+    setShowReviewModal(true)
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'confirmed':
@@ -259,6 +267,15 @@ export default function BookingHistory({ visible, onClose }: BookingHistoryProps
                           <XCircle className="w-4 h-4 mr-1" />
                           Cancel
                         </button>
+                        {booking.status === 'completed' && (
+                          <button
+                            onClick={() => openReviewModal(booking)}
+                            className="flex items-center px-3 py-1 text-sm text-yellow-600 hover:text-yellow-700 border border-yellow-300 rounded hover:bg-yellow-50"
+                          >
+                            <Star className="w-4 h-4 mr-1" />
+                            Review
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -345,6 +362,20 @@ export default function BookingHistory({ visible, onClose }: BookingHistoryProps
             </div>
           </div>
         </div>
+      )}
+
+      {/* Review Modal */}
+      {selectedBooking && (
+        <ReviewModal
+          visible={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false)
+            setSelectedBooking(null)
+          }}
+          bookingId={selectedBooking._id}
+          serviceName={selectedBooking.serviceName}
+          serviceId={selectedBooking.serviceId._id}
+        />
       )}
     </>
   )

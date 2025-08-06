@@ -12,7 +12,8 @@
     "seed:services": "node scripts/seedServices.js",
     "seed:salon": "node scripts/seedSalonInfo.js",
     "seed:discounts": "node scripts/seedDiscounts.js",
-    "seed:all": "npm run seed:admin && npm run seed:services && npm run seed:salon && npm run seed:discounts"
+    "seed:reviews": "node scripts/seedReviews.js",
+    "seed:all": "npm run seed:admin && npm run seed:services && npm run seed:salon && npm run seed:discounts && npm run seed:reviews"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.2",
