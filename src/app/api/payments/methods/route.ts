@@ -8,7 +8,7 @@ import {
   setDefaultPaymentMethod,
   detachPaymentMethod 
 } from '@/lib/stripe'
-import { PaymentMethod } from '@/models/Payment'
+import PaymentMethod from '@/models/PaymentMethod'
 import Customer from '@/models/Customer'
 
 export async function GET(req: NextRequest) {

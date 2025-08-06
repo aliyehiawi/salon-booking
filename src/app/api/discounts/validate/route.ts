@@ -49,6 +49,36 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
+    // Check customer restrictions
+    if (discount.customerRestrictions?.newCustomersOnly) {
+      // Check if customer has previous bookings
+      const Booking = (await import('@/models/Booking')).default
+      const customerBookings = await Booking.find({ customerId: decoded.id })
+      if (customerBookings.length > 0) {
+        return NextResponse.json({ error: 'This discount is only for new customers' }, { status: 400 })
+      }
+    }
+
+    if (discount.customerRestrictions?.existingCustomersOnly) {
+      // Check if customer has previous bookings
+      const Booking = (await import('@/models/Booking')).default
+      const customerBookings = await Booking.find({ customerId: decoded.id })
+      if (customerBookings.length === 0) {
+        return NextResponse.json({ error: 'This discount is only for existing customers' }, { status: 400 })
+      }
+    }
+
+    // Check per-customer usage limit
+    if (discount.usageRestrictions?.perCustomerLimit) {
+      const customerUsageCount = discount.usageHistory.filter(
+        (usage: any) => usage.customerId.toString() === decoded.id
+      ).length
+      
+      if (customerUsageCount >= discount.usageRestrictions.perCustomerLimit) {
+        return NextResponse.json({ error: 'You have already used this discount code' }, { status: 400 })
+      }
+    }
+
     // Calculate discount amount
     let discountAmount = 0
     if (discount.discountType === 'percentage') {
