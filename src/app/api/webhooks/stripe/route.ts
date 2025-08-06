@@ -163,8 +163,9 @@ async function trackDiscountUsage(discountCode: string, customerId: string) {
       // Add usage history
       discount.usageHistory.push({
         customerId: customerId,
-        usedAt: new Date(),
-        amount: 0 // We don't store the amount in usage history for simplicity
+        bookingId: null, // We don't have bookingId in this context
+        discountAmount: 0, // We don't store the amount in usage history for simplicity
+        usedAt: new Date()
       })
       
       await discount.save()
