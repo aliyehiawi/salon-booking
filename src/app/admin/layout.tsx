@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Calendar, Settings, LogOut, Users, Clock, Home, BarChart3, Building2, Tag, Award } from 'lucide-react'
+import { Calendar, Settings, LogOut, Users, Clock, Home, BarChart3, Building2, Tag, Award, FileText } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 
@@ -54,135 +54,80 @@ export default function AdminLayout({
   }
 
   const navItems = [
-    {
-      href: '/admin/dashboard',
-      label: 'Dashboard',
-      icon: BarChart3,
-      description: 'Analytics and overview'
-    },
-    {
-      href: '/admin',
-      label: 'Appointments',
-      icon: Calendar,
-      description: 'View and manage bookings'
-    },
-    {
-      href: '/admin/calendar',
-      label: 'Calendar',
-      icon: Calendar,
-      description: 'Calendar view of appointments'
-    },
-    {
-      href: '/admin/customers',
-      label: 'Customers',
-      icon: Users,
-      description: 'Manage customer database'
-    },
-    {
-      href: '/admin/services',
-      label: 'Services',
-      icon: Settings,
-      description: 'Manage salon services'
-    },
-    {
-      href: '/admin/salon-info',
-      label: 'Salon Info',
-      icon: Building2,
-      description: 'Manage salon details'
-    },
-    {
-      href: '/admin/discounts',
-      label: 'Discounts',
-      icon: Tag,
-      description: 'Manage discount codes'
-    },
-    {
-      href: '/admin/loyalty',
-      label: 'Loyalty',
-      icon: Award,
-      description: 'Customer tiers and badges'
-    },
-    {
-      href: '/admin/settings',
-      label: 'Settings',
-      icon: Settings,
-      description: 'Business hours, holidays, limits'
-    }
+    { href: '/admin', label: 'Dashboard', icon: Home },
+    { href: '/admin/calendar', label: 'Calendar', icon: Calendar },
+    { href: '/admin/customers', label: 'Customers', icon: Users },
+    { href: '/admin/services', label: 'Services', icon: Tag },
+    { href: '/admin/discounts', label: 'Discounts', icon: Award },
+    { href: '/admin/loyalty', label: 'Loyalty', icon: BarChart3 },
+    { href: '/admin/reports', label: 'Reports', icon: FileText },
+    { href: '/admin/salon-info', label: 'Salon Info', icon: Building2 },
+    { href: '/admin/settings', label: 'Settings', icon: Settings },
   ]
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">Salon Admin</h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="flex items-center text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded px-3 py-1 transition"
-                title="Back to Website"
-              >
-                <Home className="w-4 h-4 mr-2" />
-                Back to Website
-              </Link>
+      {/* Sidebar */}
+      <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg">
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="flex items-center justify-center h-16 border-b">
+            <h1 className="text-xl font-bold text-secondary-600">Admin Panel</h1>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 px-4 py-6 space-y-2">
+            {navItems.map((item) => {
+              const Icon = item.icon
+              const isActive = pathname === item.href
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-secondary-100 text-secondary-700'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 mr-3" />
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
+
+          {/* User Info & Logout */}
+          <div className="p-4 border-t">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-secondary-100 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-medium text-secondary-600">
+                    {user.name?.charAt(0).toUpperCase() || 'A'}
+                  </span>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-900">{user.name || 'Admin'}</p>
+                  <p className="text-xs text-gray-500">Administrator</p>
+                </div>
+              </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center text-sm text-gray-500 hover:text-gray-700"
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                title="Logout"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
+                <LogOut className="w-5 h-5" />
               </button>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Navigation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            const isActive = pathname === item.href
-            
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`block p-6 bg-white rounded-lg shadow-sm border-2 transition-all duration-200 hover:shadow-md ${
-                  isActive 
-                    ? 'border-secondary-500 bg-secondary-50' 
-                    : 'border-gray-200 hover:border-secondary-300'
-                }`}
-              >
-                <div className="flex items-center">
-                  <div className={`p-3 rounded-lg ${
-                    isActive ? 'bg-secondary-500 text-white' : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div className="ml-4">
-                    <h3 className={`text-lg font-medium ${
-                      isActive ? 'text-secondary-700' : 'text-gray-900'
-                    }`}>
-                      {item.label}
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {item.description}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            )
-          })}
-        </div>
-
-        {/* Page Content */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* Main Content */}
+      <div className="ml-64">
+        <main className="min-h-screen">
           {children}
-        </div>
+        </main>
       </div>
     </div>
   )
