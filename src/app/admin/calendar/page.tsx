@@ -9,7 +9,12 @@ import {
   Clock,
   User,
   Phone,
-  Mail
+  Mail,
+  Edit,
+  XCircle,
+  CheckCircle,
+  AlertCircle,
+  MoreHorizontal
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns'
 
@@ -31,6 +36,13 @@ export default function AdminCalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedBookings, setSelectedBookings] = useState<Booking[]>([])
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editForm, setEditForm] = useState({
+    status: '',
+    time: '',
+    date: ''
+  })
   const { showToast } = useToast()
 
   useEffect(() => {
@@ -88,6 +100,101 @@ export default function AdminCalendarPage() {
     }
   }
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return <CheckCircle className="w-4 h-4" />
+      case 'pending':
+        return <AlertCircle className="w-4 h-4" />
+      case 'cancelled':
+        return <XCircle className="w-4 h-4" />
+      default:
+        return <MoreHorizontal className="w-4 h-4" />
+    }
+  }
+
+  const handleEditBooking = (booking: Booking) => {
+    setEditingBooking(booking)
+    setEditForm({
+      status: booking.status,
+      time: booking.time,
+      date: booking.date
+    })
+    setShowEditModal(true)
+  }
+
+  const handleSaveBooking = async () => {
+    if (!editingBooking) return
+
+    try {
+      const token = localStorage.getItem('authToken')
+      const response = await fetch(`/api/admin/bookings/${editingBooking._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: editForm.status,
+          time: editForm.time,
+          date: editForm.date
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to update booking')
+
+      // Update local state
+      setBookings(prev => prev.map(b => 
+        b._id === editingBooking._id 
+          ? { ...b, status: editForm.status, time: editForm.time, date: editForm.date }
+          : b
+      ))
+
+      // Update selected bookings if they contain the edited booking
+      setSelectedBookings(prev => prev.map(b => 
+        b._id === editingBooking._id 
+          ? { ...b, status: editForm.status, time: editForm.time, date: editForm.date }
+          : b
+      ))
+
+      showToast('Booking updated successfully', 'success')
+      setShowEditModal(false)
+      setEditingBooking(null)
+    } catch (error) {
+      showToast('Failed to update booking', 'error')
+    }
+  }
+
+  const handleCancelBooking = async (booking: Booking) => {
+    try {
+      const token = localStorage.getItem('authToken')
+      const response = await fetch(`/api/admin/bookings/${booking._id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'cancelled' })
+      })
+
+      if (!response.ok) throw new Error('Failed to cancel booking')
+
+      // Update local state
+      setBookings(prev => prev.map(b => 
+        b._id === booking._id ? { ...b, status: 'cancelled' } : b
+      ))
+
+      // Update selected bookings
+      setSelectedBookings(prev => prev.map(b => 
+        b._id === booking._id ? { ...b, status: 'cancelled' } : b
+      ))
+
+      showToast('Booking cancelled successfully', 'success')
+    } catch (error) {
+      showToast('Failed to cancel booking', 'error')
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-6">
@@ -103,7 +210,7 @@ export default function AdminCalendarPage() {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Calendar View</h1>
-        <p className="text-gray-600 mt-1">View all appointments in calendar format</p>
+        <p className="text-gray-600 mt-1">View and manage all appointments in calendar format</p>
       </div>
 
       {/* Calendar Header */}
@@ -195,9 +302,19 @@ export default function AdminCalendarPage() {
                     <h4 className="font-medium text-gray-900">{booking.name}</h4>
                     <p className="text-sm text-gray-600">{booking.serviceName}</p>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(booking.status)}`}>
-                    {booking.status}
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(booking.status)}`}>
+                      {booking.status}
+                    </span>
+                    <div className="relative">
+                      <button
+                        onClick={() => handleEditBooking(booking)}
+                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                      >
+                        <Edit className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center text-gray-600">
@@ -217,8 +334,16 @@ export default function AdminCalendarPage() {
                     {booking.phone}
                   </div>
                 </div>
-                <div className="mt-3 pt-3 border-t border-gray-200">
+                <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center">
                   <span className="text-sm font-medium text-green-600">{booking.price}</span>
+                  {booking.status !== 'cancelled' && (
+                    <button
+                      onClick={() => handleCancelBooking(booking)}
+                      className="text-xs text-red-600 hover:text-red-700 font-medium"
+                    >
+                      Cancel Booking
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -232,6 +357,76 @@ export default function AdminCalendarPage() {
             Appointments for {format(selectedDate, 'EEEE, MMMM d, yyyy')}
           </h3>
           <p className="text-gray-500">No appointments scheduled for this date.</p>
+        </div>
+      )}
+
+      {/* Edit Booking Modal */}
+      {showEditModal && editingBooking && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Booking</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-300 focus:border-secondary-300"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="postponed">Postponed</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={editForm.date}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-300 focus:border-secondary-300"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={editForm.time}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, time: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-300 focus:border-secondary-300"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3 p-6 border-t">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-700 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveBooking}
+                className="px-4 py-2 bg-secondary-500 text-white rounded-lg hover:bg-secondary-600"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

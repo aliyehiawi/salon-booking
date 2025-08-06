@@ -22,15 +22,46 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    const { status } = await req.json()
+    const { status, date, time } = await req.json()
     
-    if (!status || !['pending', 'confirmed', 'cancelled', 'postponed'].includes(status)) {
+    // Validate status if provided
+    if (status && !['pending', 'confirmed', 'cancelled', 'postponed'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
+    // Validate date if provided
+    if (date) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+      if (!dateRegex.test(date)) {
+        return NextResponse.json({ error: 'Invalid date format' }, { status: 400 })
+      }
+      
+      // Check if date is not in the past
+      const bookingDate = new Date(date)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (bookingDate < today) {
+        return NextResponse.json({ error: 'Cannot book for a past date' }, { status: 400 })
+      }
+    }
+
+    // Validate time if provided
+    if (time) {
+      const timeRegex = /^(\d{2}):(\d{2})$/
+      if (!timeRegex.test(time)) {
+        return NextResponse.json({ error: 'Invalid time format' }, { status: 400 })
+      }
+    }
+
+    // Build update object
+    const updateData: any = {}
+    if (status) updateData.status = status
+    if (date) updateData.date = date
+    if (time) updateData.time = time
+
     const booking = await Booking.findByIdAndUpdate(
       params.id,
-      { status },
+      updateData,
       { new: true }
     )
 

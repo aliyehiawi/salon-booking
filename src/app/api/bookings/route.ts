@@ -1,152 +1,95 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/dbConnect'
 import Booking from '@/models/Booking'
-import BusinessSettings from '@/models/BusinessSettings'
-import { verifyTokenString } from '@/lib/auth'
+import Service from '@/models/Service'
+import SalonInfo from '@/models/SalonInfo'
+import notificationService from '@/lib/notifications'
 
 export async function POST(req: NextRequest) {
   await dbConnect()
+  
   try {
-    const data = await req.json()
+    const { name, email, phone, serviceId, date, time, notes } = await req.json()
     
-    // Check for customer authentication
-    let customerId = null
-    const authHeader = req.headers.get('authorization')
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.substring(7)
-      const decoded = await verifyTokenString(token) as { id: string; type: string } | null
-      if (decoded && decoded.type === 'customer') {
-        customerId = decoded.id
-      }
+    // Validate required fields
+    if (!name || !email || !phone || !serviceId || !date || !time) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Get business settings
-    const settings = await BusinessSettings.findOne()
-    if (!settings) {
-      return NextResponse.json({ error: 'Business settings not found' }, { status: 500 })
-    }
-
-    // Ensure we have both serviceId and serviceName
-    if (!data.serviceId || !data.serviceName) {
-      return NextResponse.json({ error: 'Service ID and name are required' }, { status: 400 })
-    }
-
-    // --- Validation ---
-    // Email validation
-    const emailRegex = /^\S+@\S+\.\S+$/
-    if (!emailRegex.test(data.email)) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
       return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
     }
 
-    // Phone validation (allow +, digits, 10-15 chars)
-    const phoneRegex = /^\+?\d{10,15}$/
-    if (!phoneRegex.test(data.phone)) {
-      return NextResponse.json({ error: 'Invalid phone number format' }, { status: 400 })
-    }
-
-    // Date validation (not in the past, valid date)
-    const now = new Date()
-    const bookingDate = new Date(data.date)
-    if (isNaN(bookingDate.getTime())) {
-      return NextResponse.json({ error: 'Invalid date' }, { status: 400 })
-    }
-    // Only compare date part (ignore time)
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const bookingDay = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate())
-    if (bookingDay < today) {
+    // Validate date is not in the past
+    const bookingDate = new Date(date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (bookingDate < today) {
       return NextResponse.json({ error: 'Cannot book for a past date' }, { status: 400 })
     }
 
-    // Check if date is a holiday/closed
-    if (settings.holidays.includes(data.date)) {
-      return NextResponse.json({ error: 'Closed for holiday' }, { status: 400 })
+    // Get service details
+    const service = await Service.findById(serviceId)
+    if (!service) {
+      return NextResponse.json({ error: 'Service not found' }, { status: 404 })
     }
 
-    // Check max bookings per day
-    const bookingsCount = await Booking.countDocuments({ date: data.date, status: { $ne: 'cancelled' } })
-    if (bookingsCount >= settings.maxBookingsPerDay) {
-      return NextResponse.json({ error: 'Fully booked for this day' }, { status: 400 })
-    }
-
-    // Time validation (use business hours from settings)
-    const timeRegex = /^(\d{2}):(\d{2})$/
-    const match = data.time.match(timeRegex)
-    if (!match) {
-      return NextResponse.json({ error: 'Invalid time format' }, { status: 400 })
-    }
-    const hour = parseInt(match[1], 10)
-    const minute = parseInt(match[2], 10)
-    // Get business hours for the day
-    const dayOfWeek = bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
-    const hours = settings.businessHours[dayOfWeek]
-    if (!hours || !hours.open || !hours.close) {
-      return NextResponse.json({ error: 'Closed on this day' }, { status: 400 })
-    }
-    const [startHour, startMinute] = hours.open.split(':').map(Number)
-    const [endHour, endMinute] = hours.close.split(':').map(Number)
-    const bookingMinutes = hour * 60 + minute
-    const openMinutes = startHour * 60 + startMinute
-    const closeMinutes = endHour * 60 + endMinute
-    if (
-      bookingMinutes < openMinutes ||
-      bookingMinutes + 1 > closeMinutes || // +1 to ensure booking ends before close
-      minute % 15 !== 0
-    ) {
-      return NextResponse.json({ error: `Time must be within business hours (${hours.open}-${hours.close}) and on a 15-minute interval` }, { status: 400 })
-    }
-
-    // Duplicate booking prevention (same service, date, time, and email or phone)
-    const duplicate = await Booking.findOne({
-      serviceId: data.serviceId,
-      date: data.date,
-      time: data.time,
-      $or: [
-        { email: data.email },
-        { phone: data.phone }
-      ]
+    // Check if slot is available
+    const existingBooking = await Booking.findOne({
+      date,
+      time,
+      status: { $nin: ['cancelled'] }
     })
-    if (duplicate) {
-      return NextResponse.json({ error: 'Duplicate booking detected for this slot' }, { status: 409 })
+
+    if (existingBooking) {
+      return NextResponse.json({ error: 'This time slot is already booked' }, { status: 409 })
     }
 
-    // Prevent overlapping bookings (with break time)
-    const breakMinutes = settings.breakMinutes || 0
-    // Assume service duration is in minutes in data.serviceDuration (or fallback to 60)
-    const durationMinutes = data.serviceDuration ? parseInt(data.serviceDuration) : 60
-    const newBookingStart = bookingMinutes
-    const newBookingEnd = bookingMinutes + durationMinutes
-    const existingBookings = await Booking.find({ date: data.date, status: { $ne: 'cancelled' } }).populate('serviceId')
-    for (const booking of existingBookings) {
-      const [bHour, bMinute] = booking.time.split(':').map(Number)
-      const bStart = bHour * 60 + bMinute
-      let bDuration = 60
-      if (booking.serviceId && booking.serviceId.duration) {
-        const match = booking.serviceId.duration.match(/(\d+)/)
-        bDuration = match ? parseInt(match[1]) : 60
-      }
-      const bEnd = bStart + bDuration + breakMinutes
-      if (
-        (newBookingStart >= bStart && newBookingStart < bEnd) ||
-        (bStart >= newBookingStart && bStart < newBookingEnd + breakMinutes)
-      ) {
-        return NextResponse.json({ error: 'Booking overlaps with another appointment or break time' }, { status: 400 })
-      }
-    }
-
-    const booking = await Booking.create({
-      ...data,
-      customerId
+    // Create booking
+    const booking = new Booking({
+      name,
+      email,
+      phone,
+      serviceId,
+      serviceName: service.name,
+      date,
+      time,
+      price: service.price,
+      notes,
+      status: 'pending',
+      paymentStatus: 'pending'
     })
-    return NextResponse.json({ 
-      message: 'Booking saved', 
-      booking,
-      bookingId: booking._id 
-    }, { status: 201 })
-  } catch (err) {
-    if (err instanceof Error) {
-      return NextResponse.json({ error: err.message }, { status: 500 })
+
+    await booking.save()
+
+    // Get salon information for notifications
+    const salonInfo = await SalonInfo.findOne()
+    
+    // Send notification
+    try {
+      await notificationService.sendBookingConfirmation({
+        to: email,
+        name,
+        bookingId: booking._id.toString(),
+        serviceName: service.name,
+        date,
+        time,
+        price: service.price,
+        salonName: salonInfo?.name,
+        salonPhone: salonInfo?.phone,
+        salonAddress: salonInfo?.address
+      }, true) // Send both email and SMS
+    } catch (notificationError) {
+      console.error('Failed to send notification:', notificationError)
+      // Don't fail the booking if notification fails
     }
-    return NextResponse.json({ error: 'Unknown error' }, { status: 500 })
+
+    return NextResponse.json(booking, { status: 201 })
+  } catch (err: any) {
+    console.error('Booking creation error:', err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
 
