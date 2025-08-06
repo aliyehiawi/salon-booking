@@ -69,18 +69,19 @@ export async function POST(req: NextRequest) {
     
     // Send notification
     try {
-      await notificationService.sendBookingConfirmation({
-        to: email,
-        name,
-        bookingId: booking._id.toString(),
-        serviceName: service.name,
-        date,
-        time,
-        price: service.price,
-        salonName: salonInfo?.name,
-        salonPhone: salonInfo?.phone,
-        salonAddress: salonInfo?.address
-      }, true) // Send both email and SMS
+             await notificationService.sendBookingConfirmation({
+         to: email,
+         name,
+         bookingId: booking._id.toString(),
+         serviceName: service.name,
+         date,
+         time,
+         price: service.price,
+         phone,
+         salonName: salonInfo?.name,
+         salonPhone: salonInfo?.phone,
+         salonAddress: salonInfo?.address
+       }, true) // Send both email and SMS
     } catch (notificationError) {
       console.error('Failed to send notification:', notificationError)
       // Don't fail the booking if notification fails

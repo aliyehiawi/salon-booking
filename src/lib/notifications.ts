@@ -26,6 +26,7 @@ interface NotificationData {
   date: string
   time: string
   price: string
+  phone?: string
   salonName?: string
   salonPhone?: string
   salonAddress?: string
