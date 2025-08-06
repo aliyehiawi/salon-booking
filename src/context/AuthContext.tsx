@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface Customer {
   id: string
@@ -38,6 +39,7 @@ interface AuthContextType {
   logout: () => void
   updateProfile: (data: Partial<Customer>) => Promise<{ success: boolean; error?: string }>
   loading: boolean
+  handleApiError: (response: Response) => boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -46,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   // Check for existing token on mount
   useEffect(() => {
@@ -72,11 +75,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Token is invalid, clear it
         localStorage.removeItem('authToken')
         setToken(null)
+        setUser(null)
       }
     } catch (error) {
       console.error('Failed to fetch user profile:', error)
       localStorage.removeItem('authToken')
       setToken(null)
+      setUser(null)
     } finally {
       setLoading(false)
     }
@@ -137,6 +142,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null)
     localStorage.removeItem('authToken')
     localStorage.removeItem('adminToken') // Also clear admin token if exists
+    
+    // Redirect to login page if we're on an admin page
+    if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname
+      if (currentPath.startsWith('/admin')) {
+        router.push('/login')
+      }
+    }
+  }
+
+  const handleApiError = (response: Response): boolean => {
+    if (response.status === 401) {
+      // Token expired or invalid
+      logout()
+      return true // Error was handled
+    }
+    return false // Error was not handled
   }
 
   const updateProfile = async (data: Partial<Customer>) => {
@@ -151,6 +173,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         body: JSON.stringify(data)
       })
+
+      if (handleApiError(response)) {
+        return { success: false, error: 'Session expired. Please login again.' }
+      }
 
       const responseData = await response.json()
 
@@ -173,7 +199,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       updateProfile,
-      loading
+      loading,
+      handleApiError
     }}>
       {children}
     </AuthContext.Provider>

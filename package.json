@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup": "node scripts/setup-env.js",
+    "seed:admin": "node scripts/createAdmin.js",
+    "seed:services": "node scripts/seedServices.js",
+    "seed:salon": "node scripts/seedSalonInfo.js",
+    "seed:discounts": "node scripts/seedDiscounts.js",
+    "seed:all": "npm run seed:admin && npm run seed:services && npm run seed:salon && npm run seed:discounts"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.2",
@@ -14,6 +20,8 @@
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@heroicons/react": "^2.2.0",
+    "@stripe/react-stripe-js": "^3.8.1",
+    "@stripe/stripe-js": "^7.7.0",
     "bcrypt": "^6.0.0",
     "classnames": "^2.5.1",
     "date-fns": "^4.1.0",
@@ -24,7 +32,8 @@
     "next": "15.3.5",
     "react": "^19.0.0",
     "react-datepicker": "^8.4.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "stripe": "^18.4.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

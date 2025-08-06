@@ -13,6 +13,15 @@ const customerSchema = new mongoose.Schema(
       notifications: { type: Boolean, default: true },
       marketing: { type: Boolean, default: false },
     },
+    loyaltyPoints: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    stripeCustomerId: {
+      type: String,
+      default: null
+    }
   },
   { timestamps: true }
 )

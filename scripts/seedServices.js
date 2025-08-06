@@ -1,6 +1,24 @@
 // scripts/seedServices.js
-require('dotenv').config({ path: '.env.local' });
-const mongoose = require('mongoose');
+const mongoose = require('mongoose')
+const path = require('path')
+
+// Load environment variables
+try {
+  require('dotenv').config({ path: path.resolve(process.cwd(), '.env') })
+} catch (error) {
+  console.log('No .env file found, using default values')
+}
+
+// Check for required environment variables
+if (!process.env.MONGODB_URI) {
+  console.error('❌ MONGODB_URI environment variable is not set!')
+  console.error('Please create a .env file in the root directory with:')
+  console.error('MONGODB_URI=mongodb://localhost:27017/salon-booking')
+  console.error('JWT_SECRET=your-super-secret-jwt-key')
+  console.error('STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key')
+  console.error('STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key')
+  process.exit(1)
+}
 
 // 1. Define a Service schema right here
 const serviceSchema = new mongoose.Schema(
@@ -65,11 +83,13 @@ const services = [
 
 async function seed() {
   // Connect
-  await mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser:    true,
-    useUnifiedTopology: true,
-  });
-  console.log('🗄️  Connected to MongoDB');
+  await mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('✅ Connected to MongoDB'))
+    .catch(err => {
+      console.error('❌ MongoDB connection error:', err.message)
+      console.error('Please make sure MongoDB is running and the connection string is correct')
+      process.exit(1)
+    })
 
   // Clear out old docs
   await Service.deleteMany({});

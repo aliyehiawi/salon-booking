@@ -1,5 +1,6 @@
 // src/lib/dbConnect.ts
 import mongoose from 'mongoose'
+import { config } from './config'
 
 type MongooseCache = {
   conn: typeof mongoose | null
@@ -19,7 +20,7 @@ export default async function dbConnect() {
   }
   if (!cache.promise) {
     cache.promise = mongoose
-      .connect(process.env.MONGO_URI!)
+      .connect(config.mongodbUri)
       .then((mongoose) => mongoose)
   }
   cache.conn = await cache.promise
