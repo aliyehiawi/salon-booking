@@ -1,124 +1,240 @@
 // Configuration management for the salon booking system
 interface Config {
   // Database
-  mongodbUri: string
+  database: {
+    uri: string
+    name: string
+  }
   
   // JWT
-  jwtSecret: string
-  jwtExpiresIn: string
+  jwt: {
+    secret: string
+    expiresIn: string
+  }
   
-  // Application
-  nodeEnv: string
-  appUrl: string
-  appName: string
+  // Stripe
+  stripe: {
+    secretKey: string
+    publishableKey: string
+    webhookSecret: string
+  }
   
-  // Salon Information
-  salonName: string
-  salonPhone: string
-  salonEmail: string
-  salonAddress: string
-  salonWebsite: string
+  // Email
+  email: {
+    host: string
+    port: number
+    user: string
+    pass: string
+    from: string
+  }
   
-  // Stripe Configuration
-  stripeSecretKey: string
-  stripePublishableKey: string
-  stripeWebhookSecret: string
+  // SMS (Twilio)
+  sms: {
+    accountSid: string
+    authToken: string
+    phoneNumber: string
+  }
   
-  // Points System
-  pointsPerDollar: number
-  pointsToDiscountRate: number
-  pointsNeededForDiscount: number
-  discountPercentagePer100Points: number
-  maxPointsRedemptionPercentage: number
-  
-  // Feature Flags
-  enableSmsNotifications: boolean
-  enableEmailNotifications: boolean
-  enableFileUploads: boolean
-  enableAnalytics: boolean
+  // App
+  app: {
+    name: string
+    url: string
+    environment: string
+    port: number
+  }
   
   // Security
-  bcryptRounds: number
-  rateLimitWindow: string
-  rateLimitMaxRequests: number
+  security: {
+    bcryptRounds: number
+    sessionSecret: string
+    allowedOrigins: string[]
+  }
+  
+  // Logging
+  logging: {
+    level: string
+    serviceUrl?: string
+    serviceToken?: string
+  }
 }
 
-// Validate required environment variables
-function validateConfig(): void {
-  const required = [
+function validateConfig(): Config {
+  const requiredEnvVars = [
     'MONGODB_URI',
     'JWT_SECRET',
-    'STRIPE_SECRET_KEY'
+    'STRIPE_SECRET_KEY',
+    'STRIPE_PUBLISHABLE_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+    'SMTP_HOST',
+    'SMTP_USER',
+    'SMTP_PASS',
+    'TWILIO_ACCOUNT_SID',
+    'TWILIO_AUTH_TOKEN',
+    'TWILIO_PHONE_NUMBER'
   ]
-  
-  const missing = required.filter(key => !process.env[key])
-  
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
-  }
-}
 
-// Get configuration with defaults
-export function getConfig(): Config {
-  validateConfig()
+  const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
   
+  if (missingVars.length > 0) {
+    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`)
+  }
+
   return {
-    // Database
-    mongodbUri: process.env.MONGODB_URI!,
+    database: {
+      uri: process.env.MONGODB_URI!,
+      name: process.env.MONGODB_NAME || 'salon-booking'
+    },
     
-    // JWT
-    jwtSecret: process.env.JWT_SECRET!,
-    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '2h',
+    jwt: {
+      secret: process.env.JWT_SECRET!,
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+    },
     
-    // Application
-    nodeEnv: process.env.NODE_ENV || 'development',
-    appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-    appName: process.env.NEXT_PUBLIC_APP_NAME || 'Salon Booking',
+    stripe: {
+      secretKey: process.env.STRIPE_SECRET_KEY!,
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY!,
+      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET!
+    },
     
-    // Salon Information
-    salonName: process.env.NEXT_PUBLIC_SALON_NAME || 'Your Salon Name',
-    salonPhone: process.env.NEXT_PUBLIC_SALON_PHONE || '+1-555-123-4567',
-    salonEmail: process.env.NEXT_PUBLIC_SALON_EMAIL || 'info@yoursalon.com',
-    salonAddress: process.env.NEXT_PUBLIC_SALON_ADDRESS || '123 Main St, City, State 12345',
-    salonWebsite: process.env.NEXT_PUBLIC_SALON_WEBSITE || 'https://yoursalon.com',
+    email: {
+      host: process.env.SMTP_HOST!,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      user: process.env.SMTP_USER!,
+      pass: process.env.SMTP_PASS!,
+      from: process.env.SMTP_FROM || 'noreply@salon.com'
+    },
     
-    // Stripe Configuration
-    stripeSecretKey: process.env.STRIPE_SECRET_KEY!,
-    stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
-    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    sms: {
+      accountSid: process.env.TWILIO_ACCOUNT_SID!,
+      authToken: process.env.TWILIO_AUTH_TOKEN!,
+      phoneNumber: process.env.TWILIO_PHONE_NUMBER!
+    },
     
-    // Points System
-    pointsPerDollar: parseFloat(process.env.POINTS_PER_DOLLAR || '1'),
-    pointsToDiscountRate: parseFloat(process.env.POINTS_TO_DISCOUNT_RATE || '0.01'),
-    pointsNeededForDiscount: parseInt(process.env.POINTS_NEEDED_FOR_DISCOUNT || '100'),
-    discountPercentagePer100Points: parseFloat(process.env.DISCOUNT_PERCENTAGE_PER_100_POINTS || '5'),
-    maxPointsRedemptionPercentage: parseFloat(process.env.MAX_POINTS_REDEMPTION_PERCENTAGE || '20'),
+    app: {
+      name: process.env.APP_NAME || 'Salon Booking System',
+      url: process.env.APP_URL || 'http://localhost:3000',
+      environment: process.env.NODE_ENV || 'development',
+      port: parseInt(process.env.PORT || '3000')
+    },
     
-    // Feature Flags
-    enableSmsNotifications: process.env.ENABLE_SMS_NOTIFICATIONS === 'true',
-    enableEmailNotifications: process.env.ENABLE_EMAIL_NOTIFICATIONS === 'true',
-    enableFileUploads: process.env.ENABLE_FILE_UPLOADS === 'true',
-    enableAnalytics: process.env.ENABLE_ANALYTICS === 'true',
+    security: {
+      bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12'),
+      sessionSecret: process.env.SESSION_SECRET || process.env.JWT_SECRET!,
+      allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000']
+    },
     
-    // Security
-    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '10'),
-    rateLimitWindow: process.env.RATE_LIMIT_WINDOW || '15m',
-    rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100')
+    logging: {
+      level: process.env.LOG_LEVEL || 'info',
+      serviceUrl: process.env.LOG_SERVICE_URL,
+      serviceToken: process.env.LOG_SERVICE_TOKEN
+    }
   }
 }
 
-// Export singleton config instance
-export const config = getConfig()
+// Export validated config
+export const config = validateConfig()
 
-// Helper functions
-export function isDevelopment(): boolean {
-  return config.nodeEnv === 'development'
+// Environment-specific helpers
+export const isDevelopment = config.app.environment === 'development'
+export const isProduction = config.app.environment === 'production'
+export const isTest = config.app.environment === 'test'
+
+// Feature flags
+export const features = {
+  emailNotifications: process.env.ENABLE_EMAIL_NOTIFICATIONS !== 'false',
+  smsNotifications: process.env.ENABLE_SMS_NOTIFICATIONS !== 'false',
+  stripePayments: process.env.ENABLE_STRIPE_PAYMENTS !== 'false',
+  rateLimiting: process.env.ENABLE_RATE_LIMITING !== 'false',
+  logging: process.env.ENABLE_LOGGING !== 'false'
 }
 
-export function isProduction(): boolean {
-  return config.nodeEnv === 'production'
+// Database connection string with options
+export const getDatabaseUri = (): string => {
+  const uri = config.database.uri
+  const options = {
+    retryWrites: true,
+    w: 'majority',
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+    bufferMaxEntries: 0
+  }
+  
+  const queryString = new URLSearchParams(options as any).toString()
+  return queryString ? `${uri}?${queryString}` : uri
 }
 
-export function isTest(): boolean {
-  return config.nodeEnv === 'test'
-} 
+// Stripe configuration
+export const getStripeConfig = () => ({
+  apiVersion: '2023-10-16' as const,
+  typescript: true
+})
+
+// Email configuration
+export const getEmailConfig = () => ({
+  host: config.email.host,
+  port: config.email.port,
+  secure: config.email.port === 465,
+  auth: {
+    user: config.email.user,
+    pass: config.email.pass
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+})
+
+// CORS configuration
+export const getCorsConfig = () => ({
+  origin: isProduction ? config.security.allowedOrigins : true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'X-RateLimit-Remaining',
+    'X-RateLimit-Reset'
+  ]
+})
+
+// Rate limiting configuration
+export const getRateLimitConfig = () => ({
+  auth: {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    maxRequests: 5
+  },
+  api: {
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 100
+  },
+  booking: {
+    windowMs: 60 * 1000, // 1 minute
+    maxRequests: 10
+  }
+})
+
+// Validation schemas
+export const validationSchemas = {
+  userRegistration: {
+    name: { minLength: 2, maxLength: 50 },
+    email: { pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
+    phone: { pattern: /^\+?[\d\s\-\(\)]{10,15}$/ },
+    password: { minLength: 8, requireComplexity: true }
+  },
+  service: {
+    name: { minLength: 2, maxLength: 100 },
+    description: { minLength: 10, maxLength: 500 },
+    duration: { min: 1, max: 480 }, // 1 minute to 8 hours
+    price: { pattern: /^\$?\d+(\.\d{2})?$/ }
+  },
+  booking: {
+    date: { futureOnly: true },
+    time: { pattern: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/ }
+  }
+}
+
+// Export default config for backward compatibility
+export default config 
